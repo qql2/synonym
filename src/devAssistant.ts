@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 /* eslint-disable prefer-const */
 
 import { Editor, Notice, Setting } from "obsidian";
@@ -16,8 +17,10 @@ export class devAssistant {
         SettingTab.addSettingAdder(containerEl => this.devModeConfig(containerEl))
     }
     die() {
-        this.plugin.fundebug?.silent()
-        this.plugin.fundebug = null
+        if (this.plugin.fundebug) {
+            this.plugin.fundebug.silent = true
+            this.plugin.fundebug = null
+        }
     }
     protected addCommand() {
         this.plugin.addCommand({
@@ -59,7 +62,7 @@ export class devAssistant {
     protected async loadLogger() {
         try {
             //@ts-ignore
-            let fundebug = await import('test/fundebug')
+            let fundebug = await import('../test/fundebug')
             this.plugin.fundebug = fundebug.loadLogger()
         } catch (error) {
             this.plugin.fundebug = null

@@ -1,6 +1,6 @@
+import builtins from 'builtin-modules'
 import esbuild from "esbuild";
 import process from "process";
-import builtins from 'builtin-modules'
 
 const banner =
 	`/*
@@ -10,6 +10,8 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+
+const devModules = ['/test/fundebug.ts', '/test/fundebug']
 
 esbuild.build({
 	banner: {
@@ -43,6 +45,7 @@ esbuild.build({
 		'@codemirror/view',
 		'*.test.ts',
 		'*.test.js',
+		...(prod ? devModules : []),
 		...builtins],
 	format: 'cjs',
 	watch: !prod,
@@ -51,4 +54,5 @@ esbuild.build({
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
 	outfile: 'main.js',
+	minify: prod,
 }).catch(() => process.exit(1));
