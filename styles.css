@@ -1,0 +1,104 @@
+:root {
+    --opacity: 100%;
+    --buttonSize: 4em;
+}
+
+.HeadingShow {
+    background-color: rgba(0, 0, 0, 0);
+    left: calc(50% - 15em);
+    bottom: 4.25em;
+    visibility: visible;
+    position: absolute;
+    z-index: 14;
+    word-break: break-all;
+    text-align: center;
+    width: 30em;
+    opacity: var(--opacity);
+    touch-action: none;
+    pointer-events: none;
+}
+
+.Heading1 {
+    color: rgb(255, 31, 31);
+    font-size: 150%;
+}
+
+.Heading2 {
+    color: yellow;
+    font-size: 140%;
+}
+
+.Heading3 {
+    color: rgb(213, 0, 213);
+    font-size: 130%;
+}
+
+.Heading4 {
+    color: rgb(0, 234, 255);
+    font-size: 120%;
+}
+
+.Heading5 {
+    color: green;
+    font-size: 110%;
+}
+
+.Heading6 {
+    color: azure;
+    font-size: 100%;
+}
+
+.Heading1,
+.Heading2,
+.Heading3,
+.Heading4,
+.Heading5,
+.Heading6 {
+    background-color: black;
+    border-style: solid;
+    border-width: thin;
+    border-color: #30d3aa69;
+    border-radius: 10px;
+    box-shadow: 20em;
+    box-shadow: #25efbdea;
+    width: fit-content;
+    margin: auto;
+}
+
+.HeadingButton {
+    background-color: rgb(83, 249, 94);
+    position: absolute;
+    top: 60%;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    opacity: 100%;
+    z-index: 15;
+    max-width: 40px;
+    border-style: solid;
+    border-width: 3px;
+    border-color: rgb(30, 222, 193);
+}
+
+.HeadingButton:hover {
+    background-color: rgb(49, 205, 197);
+    opacity: 100%;
+}
+
+/* 配合StoreCursor使用: */
+.StoreButton {
+    position: absolute;
+    right: 4vw;
+    width: var(--buttonSize);
+    max-width: var(--buttonSize);
+    height: var(--buttonSize);
+    border-radius: 50%;
+}
+
+.stored {
+    background-color: rgba(39, 231, 231, 0.613);
+}
+
+.NulStored {
+    background-color: #7ac2b09d;
+}
