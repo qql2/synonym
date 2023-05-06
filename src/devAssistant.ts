@@ -33,7 +33,6 @@ export class devAssistant {
     }
     private devModeConfig(containerEl: HTMLElement): HTMLElement {
         let contextLevel = 1
-        console.log(containerEl)
         let heading = document.createElement(`h${contextLevel}`)
         heading.innerText = "开发者设计"
         containerEl.appendChild(heading)

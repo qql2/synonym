@@ -1,12 +1,35 @@
 /* eslint-disable prefer-const */
 
-import { POST_OPTIONS, REQUEST_MES, xunfeiData, xunfeiRespon } from "constant/";
-
 import { Kit } from "./kit";
 import https from 'https';
 import { hash as md5hash } from "spark-md5";
+import { xunfeiData } from "src/insertSynonym";
 
 //import SparkMD5 from 'spark-md5';
+
+export interface REQUEST_MES {
+    status: 'unrespon' | 'timeout' | 'success' | string
+    data: xunfeiData
+    error: Error | null
+}
+
+export interface xunfeiRespon {
+    desc: string
+    data: xunfeiData
+}
+
+export interface POST_OPTIONS {
+    host: string,
+    path?: string,
+    method: 'POST' | 'GET',
+    headers: HEADERS
+}
+
+export interface HEADERS {
+    "Content-Type": "application/x-www-form-urlencoded",
+    'charset': 'utf-8',
+    [propname: string]: string,
+}
 
 export class Request {
     protected request: REQUEST_MES[];
@@ -162,7 +185,7 @@ export class Request {
     Base64(str: string) {
         return window.btoa(str);
     }
-    getTypeParam(type: string = 'dependent') {
+    getTypeParam(type = 'dependent') {
         let param = "{\"type\":\"" + type + "\"}";
         return this.Base64(param);
     }

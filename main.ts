@@ -90,4 +90,8 @@ export default class Synonym extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+	testLog(...arg: any[]): void {
+		if (!this.settings.devMode) return
+		console.log('synonym testing:\n', ...arg)
+	}
 }
