@@ -1,13 +1,12 @@
 {
   "name": "synonym",
-  "version": "1.0.1",
+  "version": "0.8.0",
   "description": "A plugin for obsidian that add synonyms to notes. Make them easier to search.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "version": "node version-bump.mjs && git add manifest.json versions.json",
-    "test": "jest"
+    "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [],
   "author": "qql1",

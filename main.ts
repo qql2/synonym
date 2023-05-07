@@ -38,12 +38,6 @@ export default class Synonym extends Plugin {
 	mergeSynonym: MergeSynonym;
 
 	async Init() {
-		if (Platform.isMobileApp) {
-			new Notice("running in mobile")
-			console.log("running in mobile")
-		} else {
-			console.log("not running in mobile")
-		}
 		this.cache = {}
 		window.setTimeout(async () => {
 			await this.loadSettings();
@@ -54,8 +48,6 @@ export default class Synonym extends Plugin {
 			this.devAssistant = new devAssistant(this)
 			this.addSettingTab(new SettingTab(this.app, this))
 		}, 1 * 1000);
-		// window.setTimeout(() => {
-		// }, 10 * 1000);
 	}
 
 
