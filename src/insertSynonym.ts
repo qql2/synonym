@@ -12,7 +12,6 @@ import { MdNote } from './kit/mdNote';
 import { Request } from './kit/request';
 import { SettingTab } from './settingTab';
 import { SimplifySynonyms } from './kit/simplifySynonyms';
-import { Switch } from 'constant/consisit';
 import Synonym from '../main';
 import { SynonymCore } from './kit/synonym';
 import { YAML } from './kit/YAML';
@@ -35,22 +34,22 @@ declare interface Timer {
 }
 
 interface SETTINGS {
-    autoSimplifySynonyms: Switch
+    autoSimplifySynonyms: boolean
     xunfeiAPI: {
         appid: string;
         appkey: string;
     }
-    autoInsertSynonym: Switch;
+    autoInsertSynonym: boolean;
 }
 export type { SETTINGS as INSERT_SYNONYMS_SETTINGS }
 
 const defaultSettings: SETTINGS = {
-    autoSimplifySynonyms: 1,
+    autoSimplifySynonyms: true,
     xunfeiAPI: {
         appid: null,
         appkey: null,
     },
-    autoInsertSynonym: 1,
+    autoInsertSynonym: true,
 }
 export { defaultSettings as InsertSynonymsDefaultSettings }
 
@@ -112,7 +111,7 @@ export class InsertSynonym {
 }
 
 /** 不允许被继承 */
-export class Controller extends InsertSynonym {
+export class InsertSynonymController extends InsertSynonym {
     protected reqController: {
         reqList: REQ_INFO[],
         reqAbort: boolean
@@ -133,6 +132,42 @@ export class Controller extends InsertSynonym {
         this.addCommand()
         this.registFileEvent();
         this.registSettings()
+        SettingTab.addSettingAdder(containerEl => this.addInsertSynonymSettings(containerEl))
+    }
+    private addInsertSynonymSettings(containerEl: HTMLElement): HTMLElement {
+        let contextLevel = 1
+        let heading = document.createElement(`h${contextLevel}`)
+        heading.innerText = "导入同义词功能"
+        containerEl.appendChild(heading)
+        containerEl = this.autoInsertSynonymSetting(containerEl)
+        containerEl = this.autoSimplifySynonymSetting(containerEl)
+        return containerEl
+    }
+    private autoSimplifySynonymSetting(containerEl: HTMLElement): HTMLElement {
+        new Setting(containerEl)
+            .setName("自动简化导入的同义词组")
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.autoSimplifySynonyms)
+                    .onChange(v => {
+                        this.plugin.settings.autoSimplifySynonyms = v
+                        this.plugin.saveSettings()
+                    })
+            })
+        return containerEl
+    }
+    private autoInsertSynonymSetting(containerEl: HTMLElement): HTMLElement {
+        new Setting(containerEl)
+            .setName("自动导入同义词")
+            .addToggle(toggle => {
+                toggle
+                    .setValue(this.plugin.settings.autoInsertSynonym)
+                    .onChange(v => {
+                        this.plugin.settings.autoInsertSynonym = v
+                        this.plugin.saveSettings()
+                    })
+            })
+        return containerEl
     }
     die() {
         this.removeListener()
@@ -173,14 +208,14 @@ export class Controller extends InsertSynonym {
         return containerEl
     }
     protected async FileHandle() {
-        if (this.plugin.settings.autoInsertSynonym == 0) return;
+        if (!this.plugin.settings.autoInsertSynonym) return;
         let file = this.plugin.app.workspace.getActiveFile()
         let yaml = await FrontMatterYAML.GetYAMLtxt(file, this.plugin)
         if (YAML.hasScalarWithCommentInYAMLSeq(yaml, 'tags', this.declare)) return
         this.main(file);
     }
     protected registFileEvent() {
-        if (this.plugin.settings.autoInsertSynonym == 0) return;
+        if (!this.plugin.settings.autoInsertSynonym) return;
         const app = this.plugin.app;
         this.removeListener();
         //@ts-ignore
@@ -198,24 +233,6 @@ export class Controller extends InsertSynonym {
                 this.plugin.cache.editor = editor;
                 this.plugin.saveSettings();
                 this.main();
-            }
-        });
-        this.plugin.addCommand({
-            id: "切换自动导入同义词",
-            name: "切换/关闭/开启自动同义词",
-            callback: () => {
-                this.plugin.settings.autoInsertSynonym = (this.plugin.settings.autoInsertSynonym + 1) % 2
-                this.plugin.saveSettings();
-                new Notice('自动自动导入同义词:' + Switch[this.plugin.settings.autoInsertSynonym]);
-            }
-        });
-        this.plugin.addCommand({
-            id: "Switch auto simplifySynonyms",
-            name: "切换/Switch/关闭/开启自动简化导入的同义词标签",
-            callback: () => {
-                this.plugin.settings.autoSimplifySynonyms = (this.plugin.settings.autoSimplifySynonyms + 1) % 2
-                this.plugin.saveSettings();
-                new Notice('自动简化导入的同义词标签:' + Switch[this.plugin.settings.autoSimplifySynonyms]);
             }
         });
     }

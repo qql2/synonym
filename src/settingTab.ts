@@ -4,11 +4,9 @@
 import { App, Plugin, PluginSettingTab } from "obsidian";
 
 export class SettingTab extends PluginSettingTab {
-    plugin: Plugin;
     static settingAdders: ((containerEl: HTMLElement) => HTMLElement)[] = [];
-    constructor(app: App, plugin: Plugin) {
-        super(app, plugin);
-        this.plugin = plugin;
+    constructor(public plugin: Plugin) {
+        super(plugin.app, plugin);
     }
     /** 入口 */
     display() {
