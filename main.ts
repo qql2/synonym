@@ -5,7 +5,7 @@
 import './constant/consisit';
 
 import { Editor, MarkdownView, Notice, Platform, Plugin } from 'obsidian';
-import { INSERT_SYNONYMS_SETTINGS, InsertSynonymController, InsertSynonymsDefaultSettings } from './src/insertSynonym';
+import { INSERT_SYNONYMS_SETTINGS, InsertSynonymsDefaultSettings, _InsertSynonymController } from './src/insertSynonym';
 import { MERGE_SYNONYM_SETTINGS, MergeSynonym, MergeSynonymDefaultSettings } from 'src/mergeSynonym';
 
 import { ConsoleErrorListener } from './src/kit/listenner';
@@ -34,14 +34,14 @@ export default class Synonym extends Plugin {
 	fundebugRevideo: any;
 	ErrorListener: ConsoleErrorListener;
 	devAssistant: any;
-	synonymController: InsertSynonymController;
+	synonymController: _InsertSynonymController;
 	mergeSynonym: MergeSynonym;
 
 	async Init() {
 		this.cache = {}
 		window.setTimeout(async () => {
 			await this.loadSettings();
-			this.synonymController = new InsertSynonymController(this);
+			this.synonymController = new _InsertSynonymController(this);
 			this.mergeSynonym = new MergeSynonym(this);
 			SynonymCore.addCommand(this);
 			this.ErrorListener = new ConsoleErrorListener()
