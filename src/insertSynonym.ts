@@ -9,20 +9,13 @@ import { EnhancEditor } from './kit/enhancEditor';
 import { FrontMatterYAML } from './kit/frontMatter';
 import { KeyWord } from './kit/keyWord';
 import { MdNote } from './kit/mdNote';
-import { Request } from './kit/request';
 import { SettingTab } from './settingTab';
 import { SimplifySynonyms } from './kit/simplifySynonyms';
 import Synonym from '../main';
 import { SynonymCore } from './kit/synonym';
+import { XunFei } from './kit/request';
 import { YAML } from './kit/YAML';
 
-interface REQ_INFO {
-    'ID': number,
-    'stat': 'unRespon' | 'error' | 'success',
-    'respon': any,
-    'requestor': Function,
-    'errCount': number
-}
 export interface xunfeiData {
     ke: Array<{
         word: string;
@@ -53,73 +46,54 @@ const defaultSettings: SETTINGS = {
 }
 export { defaultSettings as InsertSynonymsDefaultSettings }
 
-export class InsertSynonym {
+
+export class _InsertSynonym {
     protected plugin;
     protected declare: string
-    protected Vtags: string[];
-    protected explicitKeys: any;
-    protected file: TFile;
     constructor(plugin: Synonym, declareWord = '导入的同义词') {
         this.plugin = plugin;
         this.declare = declareWord;
     }
     /** 获取多分关键字提取材料,每份材料最多提取出10个关键字 */
-    getMaterials() {
+    protected async getMaterials(file: TFile) {
         /* 讯飞api要求材料不能有以下特殊字符:
         换行符
         */
         EnhancEditor.updateEditorAndMDV(this.plugin);
         let materials = []
-        let wholeText = this.plugin.cache.editor.getValue()
+        let wholeText = await this.plugin.app.vault.read(file)
         /* 第一份关键字材料由文章重要词句拼接而成 */
         const bolds = MdNote.getBoldtxt(wholeText);
         // console.log('bolds:', bolds);
-        let headings = MdNote.getHeadings(this.plugin);
+        let headings = MdNote.getHeadings(this.plugin, file);
         headings = headings.map((v) => { return MdNote.delMdFormat(v) });
-        const hilight = MdNote.getHilighttxt(wholeText);
-        const links = MdNote.getlinkTxt(this.plugin);
-        materials.push([...bolds, ...headings, ...hilight, ...links].join('。'));
+        const highlight = MdNote.getHilighttxt(wholeText);
+        const links = MdNote.getlinkTxt(this.plugin, file);
+        materials.push([...bolds, ...headings, ...highlight, ...links].join('。'));
         /* 第二位关键字材料即文章正文 */
-        let fileTxt = this.plugin.cache.editor.getValue()
+        let fileTxt = await this.plugin.app.vault.read(file)
         let mainText = MdNote.delTag(fileTxt)
         mainText = MdNote.delMdFormat(mainText)
         mainText = mainText.replace(new RegExp(`${EnhancEditor.EOL}`, 'g'), '。')
         materials.push(mainText)
         /* 第三份关键字材料即非常重要的相关信息 */
-        const path = MdNote.getPath(this.plugin, false);
-        const backLinkTxt = MdNote.getBackLinkTxt(this.plugin)
-        const backLinkFileNames = MdNote.getBackLinkFileNames(this.plugin)
+        const path = MdNote.getPath(this.plugin, false, file);
+        const backLinkTxt = MdNote.getBackLinkTxt(this.plugin, file)
+        const backLinkFileNames = MdNote.getBackLinkFileNames(this.plugin, file)
         materials.push([path, ...backLinkTxt, ...backLinkFileNames].join('。'))
         return materials;
     }
     /** 核心api */
-    insertSynonym(data: xunfeiData[], keyWordMaterials: string[]) {
-        console.log(data);
-        let keys = KeyWord.collectKeyWords(data, keyWordMaterials.join('。'));
-        if (typeof this.explicitKeys === 'string') {
-            keys.push(this.explicitKeys)
-        }
-        else if (this.explicitKeys?.constructor === Array) {
-            keys.push(...this.explicitKeys)
-        }
-        console.log(keys);
-        let synTags: string[] = new SynonymCore(this.plugin).getRelativeSynonym(keys, true)
+    insertSynonym(file: TFile, keyWords: string[]) {
+        console.log(keyWords);
+        let synTags: string[] = new SynonymCore(this.plugin).getRelativeSynonym(keyWords, true)
         if (this.plugin.settings.autoSimplifySynonyms) synTags = SimplifySynonyms.simplifySynonyms(synTags)
-        FrontMatterYAML.putTagsToFrontMatter(synTags, this.file, this.plugin, undefined, this.declare)
+        FrontMatterYAML.putTagsToFrontMatter(synTags, file, this.plugin, undefined, this.declare)
         new Notice('success import Synonym: \n\n' + (synTags.join('\n\n') || 'null'));
     }
 }
-
 /** 不允许被继承 */
-export class InsertSynonymController extends InsertSynonym {
-    protected reqController: {
-        reqList: REQ_INFO[],
-        reqAbort: boolean
-    } = {
-            reqList: [],
-            reqAbort: false,
-        }
-    materials: string[];
+export class _InsertSynonymController extends _InsertSynonym {
     protected timer: Timer
     constructor(plugin: Synonym) {
         super(plugin);
@@ -127,7 +101,7 @@ export class InsertSynonymController extends InsertSynonym {
     }
     Init() {
         this.timer = {
-            DebounceOfFileHandle: debounce(this.FileHandle.bind(this), 10 * 1000, true)
+            DebounceOfFileHandle: debounce(this.FileHandle.bind(this), 2 * 1000, true)
         }
         this.addCommand()
         this.registFileEvent();
@@ -232,81 +206,40 @@ export class InsertSynonymController extends InsertSynonym {
             editorCallback: (editor: Editor, view: MarkdownView) => {
                 this.plugin.cache.editor = editor;
                 this.plugin.saveSettings();
-                this.main();
+                let file = this.plugin.app.workspace.getActiveFile()
+                this.main(file);
             }
         });
     }
-    async main(file?: TFile) {
-        if (file) this.file = file
-        else {
-            this.file = this.plugin.app.workspace.getActiveFile()
-        }
-        this.reqController.reqList = []
-        this.reqController.reqAbort = false
-        const request = new Request();
+    async main(file: TFile) {
+        if (file.extension !== 'md' && file.extension !== '.md' && file.extension !== 'markdown' && file.extension !== '.markdown') return false
         const appid = this.plugin.settings.xunfeiAPI.appid
         const appkey = this.plugin.settings.xunfeiAPI.appkey
         if (!appid || !appkey) {
             new Notice('please configure APIkey!')
             return
         }
-        this.materials = this.getMaterials();
-        console.log('materials:\n', this.materials)
-        this.explicitKeys = Yaml.parse(await FrontMatterYAML.GetYAMLtxt(this.file, this.plugin))?.keys as undefined | null | string[]
-        let id = 0
-        for (const material of this.materials) {
-            let reqInfo: REQ_INFO = {
-                'ID': id,
-                'stat': 'unRespon',
-                'respon': null,
-                'requestor': () => {
-                    // console.log('material: ' + material)
-                    request.xunFeiAPI(appkey, appid, material)
-                        .then((data: xunfeiData[]) => {
-                            this.responHandle(data, reqInfo)
-                        }).catch((err: Error) => {
-                            this.errorHandle(err, reqInfo)
-                        });
-                },
-                'errCount': 0
-            }
-            this.reqController.reqList.push(reqInfo)
-            id++;
+        let materials = await this.getMaterials(file);
+        console.log('materials:\n', materials)
+        let explicitKeys = Yaml.parse(await FrontMatterYAML.GetYAMLtxt(file, this.plugin))?.keys as undefined | null | string[] | string
+        let xunfeiDataArr = []
+        let promiseArr = []
+        for (const material of materials) {
+            if (!material.length) continue
+            promiseArr.push(XunFei.extractKeysWords(material, appid, appkey))
         }
-        /* 间隔并发,更稳定 */
-        for (const reqInfo of this.reqController.reqList) {
-            await sleep(600)
-            reqInfo.requestor()
+        for (const xunfeiData of await Promise.all(promiseArr)) {
+            xunfeiDataArr.push(...xunfeiData)
         }
-    }
-    errorHandle(err: Error, reqInfo: REQ_INFO) {
-        reqInfo.errCount++;
-        reqInfo.stat = 'error'
-        if (err.message?.search(/timeout/i) != -1)
-            if (reqInfo.errCount < 3 && !this.reqController.reqAbort) {
-                reqInfo.requestor()
-                return
-            }
-        this.reqController.reqAbort = true
-        console.log(err.message);
-        new Notice('error:' + err.message, 10000);
-        this.plugin.fundebug?.notifyError(err)
-    }
-    responHandle(data: xunfeiData[], reqInfo: REQ_INFO) {
-        /* 更新请求状态 */
-        reqInfo.stat = 'success'
-        reqInfo.respon = data
-
-        let allRespon = true;
-        for (const req of this.reqController.reqList) {
-            if (req['stat'] != 'success') { allRespon = false; break; }
+        let keyWords: string[] = []
+        keyWords.push(...KeyWord.collectKeyWords(xunfeiDataArr, materials.join('。')))
+        if (typeof explicitKeys === 'string') {
+            keyWords.push(explicitKeys)
         }
-        if (allRespon) {
-            let allData: xunfeiData[] = []
-            for (const req of this.reqController.reqList) {
-                allData.push(...(req['respon'] as xunfeiData[]))
-            }
-            this.insertSynonym(allData, this.materials)
+        else if (explicitKeys?.constructor === Array) {
+            keyWords.push(...explicitKeys)
         }
+        this.insertSynonym(file, keyWords)
+        return true
     }
 }

@@ -80,9 +80,7 @@ export class MdNote {
         txt = str.replace(rgx, '')
         return txt;
     }
-    static getPath(plugin: Synonym, withExtension: boolean) {
-        const app = plugin.app;
-        const file = app.workspace.getActiveFile();
+    static getPath(plugin: Synonym, withExtension: boolean, file: TFile) {
         const rawpath = file.path;
         if (withExtension) return rawpath;
         return MdNote.delExtension(rawpath);

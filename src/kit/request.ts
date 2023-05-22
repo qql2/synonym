@@ -1,6 +1,8 @@
+/* eslint-disable no-async-promise-executor */
 /* eslint-disable prefer-const */
 
 import { Kit } from "./kit";
+import { OptionsInit } from "got";
 import https from 'https';
 import { hash as md5hash } from "spark-md5";
 import { xunfeiData } from "src/insertSynonym";
@@ -14,8 +16,9 @@ export interface REQUEST_MES {
 }
 
 export interface xunfeiRespon {
-    desc: string
+    code: string
     data: xunfeiData
+    desc: string
 }
 
 export interface POST_OPTIONS {
@@ -113,7 +116,6 @@ export class Request {
     }
     // 超时 事件处理器
     requestOnTimeout(timeout: number, REQUEST: { destroy: () => void; }, index: number) {
-        REQUEST.destroy()
         let err: Error = {
             name: 'timeout',
             message: 'timeout after ' + timeout + 'ms'
@@ -188,5 +190,78 @@ export class Request {
     getTypeParam(type = 'dependent') {
         let param = "{\"type\":\"" + type + "\"}";
         return this.Base64(param);
+    }
+}
+
+export class XunFei {
+    constructor() { }
+    /** 入口api
+     * 
+     * 可自动对过长的文本进行分割
+     */
+    static extractKeysWords(str: string, appid: string, appkey: string): Promise<xunfeiData[]> {
+        return new Promise(async (resolve, reject) => {
+            /* 对过长的材料字符串进行切片 */
+            let limit = 30000 >> 1
+            let sliceData = Kit.split(str, limit);
+
+            let gotSent = (await import("got")).default
+            let responDataArr: xunfeiData[] = []
+            for (const data of sliceData) {
+                let t = this.getSec().toString();
+                let p = this.getTypeParam();
+                let str = appkey + t + p;
+                //Testlog('str:' + str);
+                let c = this.MD5(str);
+                let options: OptionsInit = {
+                    url: 'https://ltpapi.xfyun.cn/v1/ke',
+                    method: "POST", //请求方式 get post... 不多介绍了
+                    headers: { //需要啥传啥 我列了几个常用的，不需要删除即可
+                        "content-type": "application/x-www-form-urlencoded", //编码类型 不同的content-type传递方式不相同 下面传参时会介绍
+                        "charset": "utf-8",
+                        'X-Appid': appid,
+                        'X-CurTime': t,
+                        'X-Param': p,
+                        'X-CheckSum': c
+                    },
+                    resolveBodyOnly: true,
+                    responseType: "json", //解析响应的方式默认(text) text，json，buffer 这里我使用buffer 因为buffer可以更自由的判断响应体的类型
+                    followRedirect: true, //是否遵循重定向响应 默认(true)
+                    timeout: {
+                        request: 25000
+                    }, //请求超时时间 好像还可以比较详细的设置 需要的分细的去官网看把
+                    //下面是请求体了，划重点 根据不同的content-type选择一个即可
+                    //json: { 'text': data }, //application/json时使用 支持类型 object| Array | number | string | boolean | null
+                    // body: form,//multipart/form-data时使用 多个参数继续append即可。
+                    form: { "text": data }, //application/x-www-form-urlencoded时使用 类型只能是对象object
+                    // http2:true, //根据ALPN协议选择HTTP/2 默认(http 1.1) 这里我还在研究
+                    // isStream:true //返回的是Stream流 默认false 返回的是Promise http2好像要配合这个使用
+                    retry: { limit: 3 }
+                }
+                let respon = (await gotSent(options)) as xunfeiRespon
+                if (respon.code !== '0') throw new Error(respon.desc)
+                responDataArr.push(respon.data)
+            }
+            resolve(responDataArr)
+        })
+    }
+    static getSec() {
+        return Math.trunc(new Date().getTime() / 1000);
+    }
+    static getTypeParam(type = 'dependent') {
+        let param = "{\"type\":\"" + type + "\"}";
+        return this.Base64(param);
+    }
+    static Base64(str: string) {
+        return window.btoa(str);
+    }
+    static MD5(str: string) {
+        // const hash = createHash('md5');
+        // hash.update(str);
+        // let md5 = hash.digest('hex');
+        // // Testlog('md5:' + md5);
+        // return md5
+        const hash = md5hash(str);
+        return hash;
     }
 }
