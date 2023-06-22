@@ -184,6 +184,7 @@ export class _InsertSynonymController extends _InsertSynonym {
     protected async FileHandle() {
         if (!this.plugin.settings.autoInsertSynonym) return;
         let file = this.plugin.app.workspace.getActiveFile()
+        if (!MdNote.isMdFile(file)) return
         let yaml = await FrontMatterYAML.GetYAMLtxt(file, this.plugin)
         if (YAML.hasScalarWithCommentInYAMLSeq(yaml, 'tags', this.declare)) return
         this.main(file);
@@ -211,17 +212,17 @@ export class _InsertSynonymController extends _InsertSynonym {
             }
         });
     }
-    async main(file: TFile) {
-        if (file.extension !== 'md' && file.extension !== '.md' && file.extension !== 'markdown' && file.extension !== '.markdown') return false
+    async main(mdFile: TFile) {
+        if (!MdNote.isMdFile(mdFile)) return false
         const appid = this.plugin.settings.xunfeiAPI.appid
         const appkey = this.plugin.settings.xunfeiAPI.appkey
         if (!appid || !appkey) {
             new Notice('please configure APIkey!')
             return
         }
-        let materials = await this.getMaterials(file);
+        let materials = await this.getMaterials(mdFile);
         console.log('materials:\n', materials)
-        let explicitKeys = Yaml.parse(await FrontMatterYAML.GetYAMLtxt(file, this.plugin))?.keys as undefined | null | string[] | string
+        let explicitKeys = Yaml.parse(await FrontMatterYAML.GetYAMLtxt(mdFile, this.plugin))?.keys as undefined | null | string[] | string
         let xunfeiDataArr = []
         let promiseArr = []
         for (const material of materials) {
@@ -239,7 +240,7 @@ export class _InsertSynonymController extends _InsertSynonym {
         else if (explicitKeys?.constructor === Array) {
             keyWords.push(...explicitKeys)
         }
-        this.insertSynonym(file, keyWords)
+        this.insertSynonym(mdFile, keyWords)
         return true
     }
 }

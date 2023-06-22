@@ -9,6 +9,13 @@ import Synonym from "main";
 export class MdNote {
     static EOL = "(\r?\n|\r)"
     constructor() { }
+    static isMdFile(mdFile: TFile) {
+        if (mdFile.extension !== 'md'
+            && mdFile.extension !== '.md'
+            && mdFile.extension !== 'markdown'
+            && mdFile.extension !== '.markdown') return false
+        return true
+    }
     static getBackLinkTxt(plugin: Synonym, file = plugin.app.workspace.getActiveFile()) {
         const rst = [];
         // @ts-ignore
