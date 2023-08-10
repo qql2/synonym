@@ -4,6 +4,7 @@
 import { TFile, getAllTags } from "obsidian";
 
 import { CodeBlockJudge } from "code-block-judge";
+import { Kit } from "./kit";
 import Synonym from "main";
 
 export class MdNote {
@@ -112,10 +113,18 @@ export class MdNote {
         })
         return txt;
     }
-    static getHeadings(plugin: Synonym, file?: TFile) {
+    static async getHeadings(plugin: Synonym, file?: TFile) {
         const app = plugin.app;
         if (!file) file = app.workspace.getActiveFile();
-        const cache = app.metadataCache.getFileCache(file);
+        let timeout = 3000
+        let delay = 500
+        let cache
+        for (let i = 0; i * delay <= timeout; i++) {
+            await Kit.sleep(delay)
+            cache = app.metadataCache.getFileCache(file)
+            if (cache) break
+        }
+        if (!cache) throw new Error('cache not found')
         const txt: string[] = [];
         cache.headings?.forEach((v, i) => {
             txt.push(v['heading']);
