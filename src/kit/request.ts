@@ -208,6 +208,8 @@ export class XunFei {
             let gotSent = (await import("got")).default
             let responDataArr: xunfeiData[] = []
             for (const data of sliceData) {
+                /* 按讯飞API要求,不允许无汉字字符串 */
+                if (data.search(/[\u4e00-\u9fa5]/) == -1) continue
                 let t = this.getSec().toString();
                 let p = this.getTypeParam();
                 let str = appkey + t + p;

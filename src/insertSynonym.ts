@@ -56,8 +56,10 @@ export class _InsertSynonym {
     }
     /** 获取多分关键字提取材料,每份材料最多提取出10个关键字 */
     protected async getMaterials(file: TFile) {
-        /* 讯飞api要求材料不能有以下特殊字符:
+        /* 讯飞api材料要求:
+        不能有以下特殊字符:
         换行符
+        至少含一个汉字
         */
         EnhancEditor.updateEditorAndMDV(this.plugin);
         let materials = []
@@ -65,7 +67,7 @@ export class _InsertSynonym {
         /* 第一份关键字材料由文章重要词句拼接而成 */
         const bolds = MdNote.getBoldtxt(wholeText);
         // console.log('bolds:', bolds);
-        let headings = MdNote.getHeadings(this.plugin, file);
+        let headings = await MdNote.getHeadings(this.plugin, file);
         headings = headings.map((v) => { return MdNote.delMdFormat(v) });
         const highlight = MdNote.getHilighttxt(wholeText);
         const links = MdNote.getlinkTxt(this.plugin, file);
@@ -184,6 +186,7 @@ export class _InsertSynonymController extends _InsertSynonym {
     protected async FileHandle() {
         if (!this.plugin.settings.autoInsertSynonym) return;
         let file = this.plugin.app.workspace.getActiveFile()
+        if (!file) return
         if (!MdNote.isMdFile(file)) return
         let yaml = await FrontMatterYAML.GetYAMLtxt(file, this.plugin)
         if (YAML.hasScalarWithCommentInYAMLSeq(yaml, 'tags', this.declare)) return
