@@ -37,12 +37,11 @@ export class YAML {
         else {
             let tagsSeq = new YAMLSeq()
             tagsSeq.add(newTagsScalar)
-            let tagsPair = new Pair(name, tagsSeq)
             if (!doc.contents) {
                 let yamlMap = new YAMLMap() as ParsedNode
                 doc.contents = yamlMap
             }
-            doc.add(tagsPair)
+            doc.set(name, tagsSeq)
         }
         return doc.toString({ lineWidth: 0 })
     }
