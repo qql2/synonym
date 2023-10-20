@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable prefer-const */
 
-import { Plugin, TFile } from 'obsidian';
+import { MarkdownView, Plugin, TFile, View } from 'obsidian';
 
 import { Kit } from "./kit";
 
@@ -23,25 +23,29 @@ export class ModifyFile {
         if (start > 0 && end > 0 && end < start) throw new Error('end must be greater than start')
         let vault = plugin.app.vault
         if (plugin.app.workspace.getActiveFile() === file) {
-            let save
-            save = new Promise((resolve, reject) => {
-                function clear() {
-                    plugin.app.vault.off('modify', modifyHandle)
-                    clearTimeout(timeId)
-                }
-                let timeId = setTimeout(() => {
-                    clear()
-                    resolve(true)
-                }, saveTimeout)
-                let modifyHandle = (modifiedFile: TFile) => {
-                    if (modifiedFile !== file) return
-                    console.log("modified!")
-                    clear()
-                    resolve(true)
-                }
-                plugin.app.vault.on('modify', modifyHandle)
-            })
-            await save
+            // let save
+            // save = new Promise((resolve, reject) => {
+            //     function clear() {
+            //         plugin.app.vault.off('modify', modifyHandle)
+            //         clearTimeout(timeId)
+            //     }
+            //     let timeId = setTimeout(() => {
+            //         clear()
+            //         resolve(true)
+            //     }, saveTimeout)
+            //     let modifyHandle = (modifiedFile: TFile) => {
+            //         if (modifiedFile !== file) return
+            //         console.log("modified!")
+            //         clear()
+            //         resolve(true)
+            //     }
+            //     plugin.app.vault.on('modify', modifyHandle)
+            // })
+            // await save
+
+            //@ts-ignore
+            let view = plugin.app.workspace.getActiveFileView() as MarkdownView
+            await view.save()
         }
         let doneFileStr = Kit.replaceRange(await vault.read(file), start, end, data)
         await vault.modify(file, doneFileStr)
