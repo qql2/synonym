@@ -1,6 +1,6 @@
 {
   "name": "synonym",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "A plugin for obsidian that add synonyms to notes. Make them easier to search.",
   "main": "main.js",
   "scripts": {
@@ -40,6 +40,7 @@
     "fundebug-javascript": "^2.8.8",
     "fundebug-revideo": "^0.8.0",
     "got": "^12.6.0",
+    "obsidian-modify-file": "^1.0.0",
     "poll": "^3.2.2",
     "spark-md5": "^3.0.2",
     "yaml": "^2.3.0"

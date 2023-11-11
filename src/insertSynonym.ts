@@ -6,7 +6,7 @@ import * as Yaml from 'yaml'
 import { Editor, MarkdownView, Notice, Setting, TFile, debounce } from 'obsidian';
 
 import { EnhancEditor } from './kit/enhancEditor';
-import { FrontMatterYAML } from './kit/frontMatter';
+import { FrontMatterYAML } from 'qql1-front-matter';
 import { KeyWord } from './kit/keyWord';
 import { MdNote } from './kit/mdNote';
 import { SettingTab } from './settingTab';
@@ -14,7 +14,7 @@ import { SimplifySynonyms } from './kit/simplifySynonyms';
 import Synonym from '../main';
 import { SynonymCore } from './kit/synonym';
 import { XunFei } from './kit/request';
-import { YAML } from './kit/YAML';
+import { YAML } from 'qql1-yaml';
 
 export interface xunfeiData {
     ke: Array<{

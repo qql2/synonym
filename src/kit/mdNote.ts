@@ -98,7 +98,7 @@ export class MdNote {
         const txt: string[] = [];
         markdown.replace(rgx, (word, ...args) => {
             if (!word) return word;
-            if (CodeBlockJudge.IsInAnyCodeBlock(markdown, args.slice(-2)[0])) return word;
+            if (new CodeBlockJudge(markdown).IsInAnyCodeBlock(args.slice(-2)[0])) return word;
             txt.push(args[1]);
         })
         return txt;
@@ -108,7 +108,7 @@ export class MdNote {
         const txt: string[] = [];
         markdown.replace(rgx, (word, ...args) => {
             if (!word) return word;
-            if (CodeBlockJudge.IsInAnyCodeBlock(markdown, args.slice(-3)[0])) return word;
+            if (new CodeBlockJudge(markdown).IsInAnyCodeBlock(args.slice(-3)[0])) return word;
             txt.push(args.slice(-1)[0]['str']);
         })
         return txt;
