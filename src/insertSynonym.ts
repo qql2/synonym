@@ -207,8 +207,8 @@ export class _InsertSynonymController extends _InsertSynonym {
         this.plugin.addCommand({
             id: "导入同义词",
             name: "导入同义词Synonym",
-            editorCallback: (editor: Editor, view: MarkdownView) => {
-                this.plugin.cache.editor = editor;
+            callback: () => {
+                this.plugin.cache.editor = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
                 this.plugin.saveSettings();
                 let file = this.plugin.app.workspace.getActiveFile()
                 this.main(file);
