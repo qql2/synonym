@@ -1,6 +1,6 @@
 {
   "name": "synonym",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "A plugin for obsidian that add synonyms to notes. Make them easier to search.",
   "main": "main.js",
   "scripts": {
