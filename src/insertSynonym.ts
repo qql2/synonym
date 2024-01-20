@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable prefer-const */
 
@@ -5,6 +6,7 @@ import * as Yaml from 'yaml'
 
 import { Editor, MarkdownView, Notice, Setting, TFile, debounce } from 'obsidian';
 
+import { EOL } from 'os';
 import { EnhancEditor } from './kit/enhancEditor';
 import { FrontMatterYAML } from 'qql1-front-matter';
 import { KeyWord } from './kit/keyWord';
@@ -33,6 +35,7 @@ interface SETTINGS {
         appkey: string;
     }
     autoInsertSynonym: boolean;
+    excludeFilesRegStr: string[];
 }
 export type { SETTINGS as INSERT_SYNONYMS_SETTINGS }
 
@@ -43,6 +46,7 @@ const defaultSettings: SETTINGS = {
         appkey: null,
     },
     autoInsertSynonym: true,
+    excludeFilesRegStr: [],
 }
 export { defaultSettings as InsertSynonymsDefaultSettings }
 
@@ -108,7 +112,6 @@ export class _InsertSynonymController extends _InsertSynonym {
         this.addCommand()
         this.registFileEvent();
         this.registSettings()
-        SettingTab.addSettingAdder(containerEl => this.addInsertSynonymSettings(containerEl))
     }
     private addInsertSynonymSettings(containerEl: HTMLElement): HTMLElement {
         let contextLevel = 1
@@ -117,6 +120,7 @@ export class _InsertSynonymController extends _InsertSynonym {
         containerEl.appendChild(heading)
         containerEl = this.autoInsertSynonymSetting(containerEl)
         containerEl = this.autoSimplifySynonymSetting(containerEl)
+        containerEl = this.excludeFilesConfig(containerEl, contextLevel + 1)
         return containerEl
     }
     private autoSimplifySynonymSetting(containerEl: HTMLElement): HTMLElement {
@@ -150,6 +154,45 @@ export class _InsertSynonymController extends _InsertSynonym {
     }
     private registSettings() {
         SettingTab.addSettingAdder(containerEl => this.extractKeysConfig(containerEl, 1))
+        SettingTab.addSettingAdder(containerEl => this.addInsertSynonymSettings(containerEl))
+    }
+    private excludeFilesConfig(containerEl: HTMLElement, contextLevel: number): HTMLElement {
+        let heading = document.createElement(`h${contextLevel}`)
+        heading.innerText = "不需要导入同义词的文件"
+        containerEl.appendChild(heading)
+        const setting = new Setting(containerEl)
+            .setName('文件路径名正则表达式')
+            .addTextArea(text => {
+                const rawBorderColor = text.inputEl.style.borderColor
+                text
+                    .setValue(
+                        this.plugin.settings.excludeFilesRegStr.join(EOL)
+                    )
+                    .onChange(async (value) => {
+                        const rst: SETTINGS['excludeFilesRegStr'] = []
+                        const regexpStrings = value.split('\n')
+                        for (const regexpString of regexpStrings) {
+                            try {
+                                if (regexpString === '') continue
+                                new RegExp(regexpString.slice(1, regexpString.lastIndexOf('/')), regexpString.slice(regexpString.lastIndexOf('/') + 1))
+                            } catch (error) {
+                                text.inputEl.style.borderColor = 'red'
+                                return
+                            }
+                            text.inputEl.style.borderColor = rawBorderColor
+                            rst.push(regexpString)
+                        }
+                        this.plugin.settings.excludeFilesRegStr = rst
+                        await this.plugin.saveSettings()
+                    })
+            })
+        const desc = document.createElement('p')
+        desc.innerHTML = `
+        每行一个完整的正则表达式, 如<strong> /hello/ig</strong><br>
+        文件路径名基于库根目录,不包含后缀名,如: /path/to/file;
+        `
+        setting.descEl.appendChild(desc)
+        return containerEl
     }
     private extractKeysConfig(containerEl: HTMLElement, contextLevel: number): HTMLElement {
         let heading = document.createElement(`h${contextLevel}`)
@@ -188,6 +231,11 @@ export class _InsertSynonymController extends _InsertSynonym {
         let file = this.plugin.app.workspace.getActiveFile()
         if (!file) return
         if (!MdNote.isMdFile(file)) return
+        if (this.plugin.settings.excludeFilesRegStr.some(regexpString => {
+            const rgx = new RegExp(regexpString.slice(1, regexpString.lastIndexOf('/')), regexpString.slice(regexpString.lastIndexOf('/') + 1))
+            return rgx.test(file.path)
+        }
+        )) return
         let yaml = await FrontMatterYAML.GetYAMLtxt(file, this.plugin)
         if (YAML.hasScalarWithCommentInYAMLSeq(yaml, 'tags', this.declare)) return
         this.main(file);
