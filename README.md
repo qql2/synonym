@@ -1,4 +1,4 @@
-WARING! The plugin is stll in beta.
+WARING! The plugin is still in beta.
 ---
 You should backup your vault before using this plugin !
 
