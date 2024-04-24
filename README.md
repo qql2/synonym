@@ -2,6 +2,9 @@ WARING! The plugin is still in beta.
 ---
 You should backup your vault before using this plugin !
 
+# 功能介绍视频
+<iframe src="//player.bilibili.com/player.html?aid=1803574381&bvid=BV1Db421a7sC&cid=1518700693&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
 # 功能
 - 为一篇笔记添加多个同义词组，根据AI从笔记提取出来的关键词，和用户设置的同义词组
   - 打开新文件时自动导入，也可以手动运行导入命令
