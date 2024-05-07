@@ -13,7 +13,12 @@ You should backup your vault before using this plugin !
   - 合并存在交集的多个同义词组为一个
   - 快速集中编辑被分散在多个笔记中的同义词组
 
-# 用法
+# 安装
+- 从https://github.com/qql2/synonym/releases 下载全部内容，在`.obsidian/plugin/`下新建一个名为`synonym`的文件夹，并将内容放进去
+- 打开obsidian设置，在`社区插件`中启用`synonym`
+- 填写相关配置即可
+
+# 使用手册
 - 使用obsidian官方的标签作为载体，一个同义词组用一个标签表示
 ## 1. 同义词组标签语法
 ### 1.1. 实例
