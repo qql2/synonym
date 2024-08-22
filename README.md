@@ -1,6 +1,10 @@
-WARING! The plugin is stll in beta.
+WARING! The plugin is still in beta.
 ---
 You should backup your vault before using this plugin !
+
+# 功能介绍视频
+
+【synonym插件功能展示】 https://www.bilibili.com/video/BV1Db421a7sC
 
 # 功能
 - 为一篇笔记添加多个同义词组，根据AI从笔记提取出来的关键词，和用户设置的同义词组
@@ -9,7 +13,12 @@ You should backup your vault before using this plugin !
   - 合并存在交集的多个同义词组为一个
   - 快速集中编辑被分散在多个笔记中的同义词组
 
-# 用法
+# 安装
+- 从https://github.com/qql2/synonym/releases 下载全部内容，在`.obsidian/plugin/`下新建一个名为`synonym`的文件夹，并将内容放进去
+- 打开obsidian设置，在`社区插件`中启用`synonym`
+- 填写相关配置即可
+
+# 使用手册
 - 使用obsidian官方的标签作为载体，一个同义词组用一个标签表示
 ## 1. 同义词组标签语法
 ### 1.1. 实例
