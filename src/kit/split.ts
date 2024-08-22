@@ -4,8 +4,9 @@ interface bracket {
     right: string
 }
 export class Split {
-    /** @param brackets 元素为一对括号，用对象表示，left属性和right属性分别用来存放左右括号
-     * @param startL 包含在内
+    /** 把指定层级的括号内的某些字符视为分割符，然后进行分割
+     * @param brackets 元素为一对括号，用对象表示，left属性和right属性分别用来存放左右括号
+     * @param startL 包含在内，0表示括号外，1表示第一层括号，以此类推
      * @param endL 包含在内
      */
     static splitWithBracket(str: string, split: RegExp, startL = 0, endL = startL, brackets: bracket[] = undefined) {
@@ -14,7 +15,8 @@ export class Split {
             return this.isInBracket(match.index as number, bracketRange, startL, endL)
         })
     }
-    /** @param selector 返回真值表示改匹配项将会被作为分割符 */
+    /** 正则匹配到的字符，选择性的把其视为分割符
+     * @param selector 返回真值表示改匹配项将会被作为分割符 */
     private static selectiveSplit(str: string, splitRgx: RegExp, selector: (match: RegExpMatchArray) => any): string[] {
         // if (splitRgx.toString() != '/-/g') debugger
         let rst: string[] = []
@@ -29,7 +31,9 @@ export class Split {
         return rst
     }
 
-    /** @return 三维数据，一维元素为括号层级,按深度排序;二维元素为层级索引区间;三维元素分别为开始索引和结束索引,包含在内;
+    /** 
+     * 获取所有层级的括号的位置
+     * @return 三维数据，一维元素为括号层级,按深度排序;二维元素为层级索引区间;三维元素分别为开始索引和结束索引,包含在内;
      *  @param brackets 元素为一对括号，用对象表示，left属性和right属性分别用来存放左右括号
     */
     static getBracketRange(str: string, brackets: bracket[] = undefined) {
@@ -75,7 +79,8 @@ export class Split {
         }
         return 0;
     }
-    /** @param startLevel 包含在内
+    /** 判断目标索引是否在目标层级的括号内
+     * @param startLevel 包含在内
      *  @param endLevel 包含在内
     */
     static isInBracket(index: number, bracketRange: number[][][], startLevel = 0, endLevel = startLevel) {

@@ -34,23 +34,29 @@ export class MergeSynonym {
             }
         });
     }
-    /** 合并同义词标签的顶层api */
+    /** 合并同义词标签的顶层api
+     * 
+     * 
+    */
     async main2() {
         this.tagflag = new Map();
-        this.iterVaultSynonyms()
+        this.iterVaultSynonymsAndMerge()
     }
-    async iterVaultSynonyms() {
+    /** 动态遍历所有的同义词标签,并根据该同义词组找到存在交集的同义词组, 然后合并它们*/
+    async iterVaultSynonymsAndMerge() {
         this.Vtags = Tag.getVaultTags(this.plugin);
         for (const t of this.Vtags) {
             if (this.tagflag.get(t) == 'scanned') continue;
             if (!SynonymCore.isSynonym(t)) continue;
             const synons = this.getRelatedSynonym(t, this.plugin.settings.ignoreCase);
-            const tagChange = this.getMergetag(synons);
+            const tagChange = this.getMergeChange(synons);
             if (!await this.updateSynonym(tagChange)) {
+                // 该标签没有存在交集的同义词组, 无需合并
                 this.tagflag.set(t, 'scanned');
                 continue;
             }
-            this.iterVaultSynonyms();
+            /* 产生了有效合并, 标签发生了变化, 需要获取新的标签数据来继续遍历 */
+            this.iterVaultSynonymsAndMerge();
             return;
         }
         new Notice('Have merge all vault tags!');
@@ -76,7 +82,10 @@ export class MergeSynonym {
     //     const newtags = [...new Set(tagChange.values())]
     //     this.Vtags.push(...newtags);
     // }
-    /** @returns 是否发生了有效合并 */
+    /** 
+     * @returns 是否发生了有效合并(有多个标签被合并为一个标签, 而不是只有一个标签需要被合并)
+     * 
+     */
     async updateSynonym(tagChange: Map<string, string>) {
         if (!tagChange) return false;
         const olds = [...tagChange.keys()]
@@ -104,8 +113,12 @@ export class MergeSynonym {
         }
         return rst;
     }
-    /**@return 多个键值对, 键名为原标签, 键值为将要被替换的新标签 */
-    getMergetag(tags: string[]) {
+    /**
+     * 合并结果: 
+     * - 将多个有交集的同义词组去重合并为一个同义词组
+     * - 把原来每个被合并的同义词组都替换为新的同义词组
+     * @return 多个键值对, 键名为原标签, 键值为将要被替换的新标签 */
+    getMergeChange(tags: string[]) {
         const tagChange = new Map();
         if (tags.length <= 1) {
             tagChange.set(tags[0], tags[0]);
@@ -115,7 +128,7 @@ export class MergeSynonym {
         const lsts = tags.map(t => Tag.getLstOfTag(t))
         let keys = [];
         for (const l of lsts) {
-            keys.push(...(SynonymCore.splitSynonym(l)));
+            keys.push(...(SynonymCore.splitSynonymSet(l)));
         }
         keys = [...new Set(keys)];
         if (keys.length == 1) {
@@ -130,12 +143,16 @@ export class MergeSynonym {
         })
         return tagChange;
     }
+    /** 
+     *  获取与目标同义词组有交集(都具有相同的同义词)的所有同义词组
+     * @returns 一个数组
+     */
     getRelatedSynonym(SynonymTag: string, ignoreCase = true) {
         /* 去掉可能的# */
         SynonymTag = SynonymTag.replace('#', '');
         /* 提取最后一层作为代表 */
         SynonymTag = Tag.getLstOfTag(SynonymTag)
-        const keys = SynonymCore.splitSynonym(SynonymTag)
+        const keys = SynonymCore.splitSynonymSet(SynonymTag)
         const tags = Tag.getVaultTags(this.plugin);
         const rst = tags.filter(t => {
             if (!SynonymCore.isSynonym(t)) return false

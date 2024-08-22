@@ -1,6 +1,8 @@
 /* eslint-disable no-useless-escape */
 /* eslint-disable prefer-const */
 export class SimplifySynonyms {
+    /** 针对字符搜索进行优化
+    */
     static simplifySynonyms(synonyms: string[]): string[] {
         let rst: string[] = [...synonyms]
         for (let i = 0; i < rst.length; ++i) {
@@ -10,7 +12,8 @@ export class SimplifySynonyms {
         }
         return rst
     }
-    /** 判断一个同义词标签中的字段是否都是被其他同义词标签所包含 */
+    /** 判断一个同义词标签中的所有字段(字符)是否都是其他同义词标签的字串，即所有字符都能在其他同义词组中找到
+     */
     static isRepeatedSynonym(synonym: string, synonyms: string[]): boolean {
         let fields = this.splitSynonymIntoFields(synonym)
         let synonymRepeatFlag = true

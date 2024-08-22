@@ -88,6 +88,7 @@ export class SynonymCore {
         let synonyms: string[]
         if (keys.length == 0) { return [] }
         /* 初始化 */
+        /* 每个关键字对应一组同义词组 */
         const matchMap = new Map<string, MATCH_RST>();
         for (const k of keys) {
             matchMap.set(k, { specialMeaning: [], generalized: [] });
@@ -101,6 +102,7 @@ export class SynonymCore {
                 matchMap.get(k).specialMeaning.push(t)
             }
         }
+
         synonyms = this.collectMatchedSynonym(matchMap)
         if (autoExpand) {
             let preKeys: string[]
@@ -126,7 +128,7 @@ export class SynonymCore {
             let synonymSnippets = synonym.split('/').filter(v => v)
             for (const synonymSnippet of synonymSnippets) {
                 if (SynonymCore.isSynonym(synonymSnippet))
-                    expendKeys.push(...SynonymCore.splitSynonym(synonymSnippet))
+                    expendKeys.push(...SynonymCore.splitSynonymSet(synonymSnippet))
             }
         }
         return expendKeys
@@ -160,9 +162,12 @@ export class SynonymCore {
         // if (keys.includes('前端') && keys.includes('标签') && targetSynonym.search('标签') != -1 && targetSynonym.search('前端') != -1) debugger;
         return rst
     }
-    /** 用一组彼此独立的关键词尝试匹配一个同义词标签,这些关键词之间没有解释作用 */
+    /** 用一组彼此独立的关键词(这些关键词之间没有解释作用)尝试匹配一个同义词标签
+     * @param keys 这些关键字没有互相解释作用
+     * @returns 只要目标同义词组中包含任意一个关键字,就返回true
+     */
     static matchSynonymByIndependentKeys(targetSynonym: string, keys: string[], ignoreCase = true) {
-        let targetKeys = SynonymCore.splitSynonym(targetSynonym)
+        let targetKeys = SynonymCore.splitSynonymSet(targetSynonym)
         if (ignoreCase) {
             targetKeys = targetKeys.map(i => i.toLowerCase())
             keys = keys.map(i => i.toLowerCase())
@@ -183,22 +188,23 @@ export class SynonymCore {
         }
         return rst
     }
-    /** 根据一组场景关键字,判断所匹配的关键字是否特殊意义下的 */
+    /** 根据一组场景关键字, 判断是否符合注释要求 */
     private isSpecial(annotation: string, SceneKeys: string[], ignoreCase: boolean = undefined) {
         if (!annotation) return false
         let splitRgx = /[，；！【】]/g
-        let synonyms = Split.splitWithBracket(annotation, splitRgx, 0).filter(v => v);
-        let synonymBoolean = new Map();
-        for (const sy of synonyms) {
-            let matchRst = this.matchSynonymBySceneKeys(sy, SceneKeys, ignoreCase)
+        /* 以括号外的分割符进行分割，得到下一层用于注释的同义词组 */
+        let synonymSets = Split.splitWithBracket(annotation, splitRgx, 0).filter(v => v);
+        let synonymSetValue = new Map();
+        for (const sySet of synonymSets) {
+            let matchRst = this.matchSynonymBySceneKeys(sySet, SceneKeys, ignoreCase)
             if (matchRst.generalized.length || matchRst.specialMeaning.length) {
-                synonymBoolean.set(sy, true)
+                synonymSetValue.set(sySet, true)
             }
             else {
-                synonymBoolean.set(sy, false)
+                synonymSetValue.set(sySet, false)
             }
         }
-        return this.calcAnnotation(annotation, synonymBoolean)
+        return this.calcAnnotation(annotation, synonymSetValue)
     }
 
     /** 将注释内容转换为逻辑表达式进行求值 */
@@ -225,18 +231,20 @@ export class SynonymCore {
         return rst
     }
 
-    /** 从目标标签中同时捕获目标关键字和其可能的注释内容 */
+    /** 从目标标签中同时捕获目标关键字和其可能的注释内容
+     * @returns 每个匹配项都有annotation捕获组，表示可能存在的注释内容，可能为undefined
+     */
     private matchKeyWithAnnotation(targetSynonym: string, targetK: string, ignoreCase = true) {
         const rst: RegExpMatchArray[] = []
         const rgx = new RegExp(`(（(?<annotation>.*?)）)?(?<=）|^)${targetK}$`, `g${ignoreCase ? 'i' : ''}`)
-        for (const key of SynonymCore.splitSynonym(targetSynonym)) {
+        for (const key of SynonymCore.splitSynonymSet(targetSynonym)) {
             const matches = Array.from(key.matchAll(rgx))
             if (matches.length) rst.push(...matches)
         }
         return rst;
     }
-    /** @return 已去空处理 */
-    static splitSynonym(synonym: string): string[] {
+    /** @return 返回若干个同义词，已去空处理 */
+    static splitSynonymSet(synonym: string): string[] {
         if (!SynonymCore.isSynonym(synonym)) throw new Error(`接受的参数:"${synonym}"不是一个同义词标签`)
         return Split.splitWithBracket(synonym, /-/g, 0, 0, [{ left: '（', right: '）' }]).filter(v => v)
     }

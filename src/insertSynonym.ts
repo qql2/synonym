@@ -284,7 +284,7 @@ export class _InsertSynonymController extends _InsertSynonym {
             xunfeiDataArr.push(...xunfeiData)
         }
         let keyWords: string[] = []
-        keyWords.push(...KeyWord.collectKeyWords(xunfeiDataArr, materials.join('。')))
+        keyWords.push(...KeyWord.collectKeyWordsAndExtend(xunfeiDataArr, materials.join('。')))
         if (typeof explicitKeys === 'string') {
             keyWords.push(explicitKeys)
         }
