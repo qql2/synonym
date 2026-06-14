@@ -16,13 +16,13 @@ import {
 import { EOL } from "os";
 import { EnhancEditor } from "./kit/enhancEditor";
 import { FrontMatterYAML } from "qql1-front-matter";
-import { KeyWord } from "./kit/keyWord";
+
 import { MdNote } from "./kit/mdNote";
 import { SettingTab } from "./settingTab";
 import { SimplifySynonyms } from "./kit/simplifySynonyms";
 import Synonym from "../main";
 import { SynonymCore } from "./kit/synonym";
-import { XunFei } from "./kit/request";
+import { SparkLLM } from "./kit/request";
 import { YAML } from "qql1-yaml";
 
 export interface xunfeiData {
@@ -31,6 +31,7 @@ export interface xunfeiData {
 		score: number;
 	}>;
 }
+
 declare interface Timer {
 	DebounceOfFileHandle: Function;
 }
@@ -41,6 +42,8 @@ interface SETTINGS {
 		appid: string;
 		appkey: string;
 	};
+	/** 星火LLM API密钥，格式为 apiKey:apiSecret */
+	sparkAPIPassword: string;
 	autoInsertSynonym: boolean;
 	excludeFilesRegStr: string[];
 	autoExtendSynonyms?: boolean;
@@ -53,6 +56,7 @@ const defaultSettings: SETTINGS = {
 		appid: null,
 		appkey: null,
 	},
+	sparkAPIPassword: '',
 	autoInsertSynonym: true,
 	excludeFilesRegStr: [],
 	autoExtendSynonyms: false,
@@ -68,11 +72,6 @@ export class _InsertSynonym {
 	}
 	/** 获取多分关键字提取材料,每份材料最多提取出10个关键字 */
 	protected async getMaterials(file: TFile) {
-		/* 讯飞api材料要求:
-        不能有以下特殊字符:
-        换行符
-        至少含一个汉字
-        */
 		EnhancEditor.updateEditorAndMDV(this.plugin);
 		let materials = [];
 		let wholeText = await this.plugin.app.vault.read(file);
@@ -253,32 +252,39 @@ export class _InsertSynonymController extends _InsertSynonym {
 		let heading = document.createElement(`h${contextLevel}`);
 		heading.innerText = "提取关键字";
 		containerEl.appendChild(heading);
-		containerEl = this.xunFeiAPIConfig(containerEl, contextLevel + 1);
+		containerEl = this.sparkAPIConfig(containerEl, contextLevel + 1);
 		return containerEl;
 	}
-	private xunFeiAPIConfig(
+	private sparkAPIConfig(
 		containerEl: HTMLElement,
 		contextLevel: number
 	): HTMLElement {
 		let heading = document.createElement(`h${contextLevel}`);
-		heading.innerText = "讯飞API";
+		heading.innerText = "讯飞星火大模型 (免费)";
 		containerEl.appendChild(heading);
-		new Setting(containerEl).setName("appid").addText((text) =>
-			text
-				.setValue(this.plugin.settings.xunfeiAPI.appid)
-				.onChange(async (value) => {
-					this.plugin.settings.xunfeiAPI.appid = value;
-					await this.plugin.saveSettings();
-				})
-		);
-		new Setting(containerEl).setName("appkey").addText((text) =>
-			text
-				.setValue(this.plugin.settings.xunfeiAPI.appkey)
-				.onChange(async (value) => {
-					this.plugin.settings.xunfeiAPI.appkey = value;
-					await this.plugin.saveSettings();
-				})
-		);
+
+		const desc = document.createElement("p");
+		desc.innerHTML = `
+		使用讯飞星火免费LLM模型(spark-lite)提取关键词。
+		请前往 <a href="https://console.xfyun.cn/services/cbm">讯飞星火控制台</a> 
+		创建应用，获取 <strong>APIKey:APISecret</strong> (冒号拼接)。<br>
+		<small>spark-lite 模型永久免费，不限量。</small>
+		`;
+		containerEl.appendChild(desc);
+
+		new Setting(containerEl)
+			.setName("星火API密钥 (apiKey:apiSecret)")
+			.setDesc("例如: abc123def:xyz789ghi")
+			.addText((text) => {
+				text
+					.setValue(this.plugin.settings.sparkAPIPassword)
+					.setPlaceholder("apiKey:apiSecret")
+					.onChange(async (value) => {
+						this.plugin.settings.sparkAPIPassword = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
 		return containerEl;
 	}
 	protected async FileHandle() {
@@ -329,10 +335,9 @@ export class _InsertSynonymController extends _InsertSynonym {
 	}
 	async main(mdFile: TFile) {
 		if (!MdNote.isMdFile(mdFile)) return false;
-		const appid = this.plugin.settings.xunfeiAPI.appid;
-		const appkey = this.plugin.settings.xunfeiAPI.appkey;
-		if (!appid || !appkey) {
-			new Notice("please configure APIkey!");
+		const apiPassword = this.plugin.settings.sparkAPIPassword;
+		if (!apiPassword) {
+			new Notice("请先在设置中配置星火API密钥 (apiKey:apiSecret)！");
 			return;
 		}
 		let materials = await this.getMaterials(mdFile);
@@ -340,27 +345,39 @@ export class _InsertSynonymController extends _InsertSynonym {
 		let explicitKeys = Yaml.parse(
 			await FrontMatterYAML.GetYAMLtxt(mdFile, this.plugin)
 		)?.keys as undefined | null | string[] | string;
-		let xunfeiDataArr = [];
-		let promiseArr = [];
+
+		/* 使用星火LLM提取关键词 */
+		let keyWords: string[] = [];
+		let allLLMKeywords: string[] = [];
+
 		for (const material of materials) {
 			if (!material.length) continue;
-			promiseArr.push(XunFei.extractKeysWords(material, appid, appkey));
+			// 跳过无汉字文本
+			if (material.search(/[\u4e00-\u9fa5]/) == -1) continue;
+			try {
+				const result = await SparkLLM.extractKeywords(material, apiPassword);
+				allLLMKeywords.push(...result);
+			} catch (error) {
+				console.error("星火LLM提取关键词失败:", error);
+				new Notice(`关键词提取失败: ${error.message}`);
+				// 继续尝试其他材料，不中断整个流程
+			}
 		}
-		for (const xunfeiData of await Promise.all(promiseArr)) {
-			xunfeiDataArr.push(...xunfeiData);
-		}
-		let keyWords: string[] = [];
-		keyWords.push(
-			...KeyWord.collectKeyWordsAndExtend(
-				xunfeiDataArr,
-				materials.join("。")
-			)
-		);
+
+		// 去重
+		keyWords = [...new Set(allLLMKeywords)];
+
 		if (typeof explicitKeys === "string") {
 			keyWords.push(explicitKeys);
 		} else if (explicitKeys?.constructor === Array) {
 			keyWords.push(...explicitKeys);
 		}
+
+		if (keyWords.length === 0) {
+			new Notice("未能提取到关键词，请检查文本内容");
+			return;
+		}
+
 		this.insertSynonym(mdFile, keyWords);
 		return true;
 	}
