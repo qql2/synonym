@@ -31,26 +31,17 @@ export class SparkLLM {
         }
 
         const url = 'https://spark-api-open.xf-yun.com/v1/chat/completions';
-        
-        const systemPrompt = `你是一个中文关键词提取助手。请从用户提供的文本中提取最重要的关键词（名词、专业术语、核心概念）。
-要求：
-1. 每个关键词应是一个独立的词或短语
-2. 关键词应当具有辨识度，能代表文本的核心内容
-3. 忽略停用词、虚词等无意义词汇
-4. 如果文本很短（少于20字），可以提取1-3个关键词
-5. 如果文本较长，最多提取10个关键词
-6. 关键词应当是中文（如果是英文术语可以保留英文）
-7. 请只返回JSON数组格式，不要包含其他说明文字
-
-示例返回格式：["关键词1","关键词2","关键词3"]`;
 
         const requestBody = {
             model: 'lite',
             messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: `请提取以下文本的关键词：\n\n${text}` }
+                {
+                    role: 'system',
+                    content: '你是一个关键词提取器。只提取关键词，用逗号分隔返回。不要解释，不要额外文字。'
+                },
+                { role: 'user', content: text }
             ],
-            temperature: 0.3,
+            temperature: 0.1,
             max_tokens: 512,
             stream: false
         };
@@ -70,7 +61,7 @@ export class SparkLLM {
         }
 
         const result = await response.json();
-        
+
         if (result.code !== 0 && result.code !== undefined) {
             throw new Error(`星火API返回错误: ${result.message || JSON.stringify(result)}`);
         }
@@ -84,28 +75,46 @@ export class SparkLLM {
     }
 
     /**
-     * 解析LLM返回的关键词JSON字符串
+     * 解析LLM返回的关键词（逗号分隔格式）
      */
     private static parseKeywords(content: string): string[] {
+        if (!content) return [];
+
+        // 去掉可能的 "关键词：" 前缀
+        const cleaned = content.trim()
+            .replace(/^(关键词|keywords)[：:]\s*/i, '')
+            .replace(/^```[\s\S]*?```$/, '');
+
+        // 尝试 JSON 解析（兼容旧格式）
         try {
-            // 尝试直接解析JSON
-            const trimmed = content.trim();
-            // 查找JSON数组部分
-            const jsonMatch = trimmed.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                if (Array.isArray(parsed)) {
-                    return parsed.filter(k => typeof k === 'string' && k.trim().length > 0);
+            const parsed = JSON.parse(cleaned);
+            if (Array.isArray(parsed)) {
+                return parsed.filter(k => typeof k === 'string' && k.trim().length > 0);
+            }
+            if (typeof parsed === 'object') {
+                for (const key of Object.keys(parsed)) {
+                    const val = parsed[key];
+                    if (Array.isArray(val)) {
+                        const rst = val.filter(k => typeof k === 'string' && k.trim().length > 0);
+                        if (rst.length > 0) return rst;
+                    }
                 }
             }
-            // 如果没找到JSON，尝试按行分割
-            const lines = trimmed.split(/[\n,，、]/).map(l => l.trim()).filter(l => l.length > 0);
-            return lines.filter(l => !l.startsWith('{') && !l.startsWith('}') && !l.startsWith('[') && !l.startsWith(']'));
         } catch {
-            // 解析失败时，尝试提取中文字符
-            const chineseWords = content.match(/[\u4e00-\u9fa5]+/g);
-            return chineseWords ? [...new Set(chineseWords)] : [];
+            // 不是 JSON，继续逗号分割
         }
+
+        // 逗号/换行分割（主要格式）
+        const parts = cleaned
+            .split(/[,，、\n]+/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0 && p.length < 100);
+
+        if (parts.length > 0) return parts;
+
+        // 最坏 fallback：提取双字以上中文词
+        const words = content.match(/[\u4e00-\u9fa5]{2,}/g);
+        return words ? [...new Set(words)].slice(0, 10) : [];
     }
 
     /**
