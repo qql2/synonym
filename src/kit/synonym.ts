@@ -96,18 +96,32 @@ export class SynonymCore {
 		for (const k of keys) {
 			matchMap.set(k, { specialMeaning: [], generalized: [] });
 		}
+		const badTags: string[] = [];
 		for (const t of Tag.getVaultTags(this.plugin)) {
-			let match = this.matchSynonymBySceneKeys(
-				t,
-				keys,
-				this.plugin.settings.ignoreCase
+			try {
+				let match = this.matchSynonymBySceneKeys(
+					t,
+					keys,
+					this.plugin.settings.ignoreCase
+				);
+				for (const k of match.generalized) {
+					matchMap.get(k).generalized.push(t);
+				}
+				for (const k of match.specialMeaning) {
+					matchMap.get(k).specialMeaning.push(t);
+				}
+			} catch (e) {
+				badTags.push(t);
+				console.warn('跳过异常标签:', t, e);
+			}
+		}
+		if (badTags.length > 0) {
+			const tagList = [...new Set(badTags)].slice(0, 10).join('\n');
+			const suffix = badTags.length > 10 ? `\n...及其他 ${badTags.length - 10} 个标签` : '';
+			new Notice(
+				`以下标签存在括号格式问题，已跳过：\n${tagList}${suffix}\n\n请编辑这些标签，补齐或删除多余的括号。`,
+				10000
 			);
-			for (const k of match.generalized) {
-				matchMap.get(k).generalized.push(t);
-			}
-			for (const k of match.specialMeaning) {
-				matchMap.get(k).specialMeaning.push(t);
-			}
 		}
 
 		synonyms = this.collectMatchedSynonym(matchMap);
