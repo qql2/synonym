@@ -27,11 +27,14 @@ export interface PLUGIN_SETTINGS
 	extends INSERT_SYNONYMS_SETTINGS,
 		MERGE_SYNONYM_SETTINGS {
 	devMode: boolean;
+	/** 调试用：下次启动时自动对当前笔记执行导入同义词 */
+	_autoTestOnLaunch?: boolean;
 }
 
 const defaultSettings: PLUGIN_SETTINGS = Object.assign(
 	{
 		devMode: false,
+		_autoTestOnLaunch: false,
 	},
 	InsertSynonymsDefaultSettings,
 	MergeSynonymDefaultSettings
@@ -61,6 +64,17 @@ export default class Synonym extends Plugin {
 			this.ErrorListener = new ConsoleErrorListener();
 			this.devAssistant = new devAssistant(this);
 			this.addSettingTab(new SettingTab(this));
+
+			// 调试：启动后自动对当前笔记执行导入同义词
+			if (this.settings._autoTestOnLaunch) {
+				this.settings._autoTestOnLaunch = false;
+				await this.saveSettings();
+				const file = this.app.workspace.getActiveFile();
+				if (file) {
+					console.log("_autoTestOnLaunch: 正在对", file.path, "执行导入同义词");
+					this.synonymController.main(file);
+				}
+			}
 		}, 1 * 1000);
 	}
 
@@ -81,7 +95,6 @@ export default class Synonym extends Plugin {
 				}
 				let enhancedEditor = new EnhancedEditor(editor);
 				let name = enhancedEditor.getSelectedTag();
-				//console.log("selected:", name);
 				new Tag(this).renameTagAndAnnota(name);
 			},
 		});

@@ -322,6 +322,7 @@ export class _InsertSynonymController extends _InsertSynonym {
 		this.plugin.addCommand({
 			id: "导入同义词",
 			name: "导入同义词Synonym",
+			hotkeys: [{ modifiers: ["Ctrl", "Alt"], key: "L" }],
 			callback: () => {
 				this.plugin.cache.editor =
 					this.plugin.app.workspace.getActiveViewOfType(
