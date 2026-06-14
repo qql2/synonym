@@ -1,4 +1,5 @@
 /* eslint-disable prefer-const */
+import { requestUrl } from 'obsidian';
 
 /**
  * 使用讯飞星火Spark LLM API进行关键词提取
@@ -32,7 +33,7 @@ export class SparkLLM {
 
         const url = 'https://spark-api-open.xf-yun.com/v1/chat/completions';
 
-        const requestBody = {
+        const body = JSON.stringify({
             model: 'lite',
             messages: [
                 {
@@ -44,23 +45,20 @@ export class SparkLLM {
             temperature: 0.1,
             max_tokens: 512,
             stream: false
-        };
+        });
 
-        const response = await fetch(url, {
+        const response = await requestUrl({
+            url: url,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiPassword}`
             },
-            body: JSON.stringify(requestBody)
+            body: body,
+            contentType: 'application/json'
         });
 
-        if (!response.ok) {
-            const errorBody = await response.text();
-            throw new Error(`星火API请求失败 (${response.status}): ${errorBody}`);
-        }
-
-        const result = await response.json();
+        const result = response.json;
 
         if (result.code !== 0 && result.code !== undefined) {
             throw new Error(`星火API返回错误: ${result.message || JSON.stringify(result)}`);
